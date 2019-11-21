@@ -1,0 +1,2 @@
+python scrare.py
+pause

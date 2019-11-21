@@ -20,45 +20,99 @@ intro = f'''
                  {activeUsers} Active
 '''
 
+class Server():
+    def __init__(self, ip='127.0.0.1', port=6969):
+        self.ip = ip
+        self.port = port
+        self.name = ''
+    def setServerName(name):
+        self.name = name
+    def getServerName():
+        return self.name
+
+class ScrareClient():
+    def __init__(self, sock, addr):
+        self.sock = sock
+        self.addr = addr
+        self.user = ''
+    def interact(self):
+        pass
+
+class ScrareServer():
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.clients = []
+    def startServer(self):
+        with socket(AF_INET, SOCK_STREAM) as s:
+            s.bind((self.host, self.port))
+            print(f'Server bound to {self.host}:{self.port}')
+
+            while True:
+                s.listen()
+                sock, addr = s.accept()
+                client = ScrareClient(sock, addr)
+                client.interact()
+
+def goodp2p(ui):
+    if ui == '':
+        return ['127.0.0.1', 6969]
+    if len(ui.split(':')) == 2:
+        if type(ui.split(':')[0]) == str:
+            try:
+                int(ui.split(':')[1])
+            except:
+                pass
+            else:
+                return [ui.split(':')[0], int(ui.split(':')[1])]
+    return False
+
 def helpScreen():
     print('Welcome to the help screen')
     print('Some of the Scrare commands are as follows')
     print('help,p2s-share,p2s-joinshare,p2p-share','p2p-joinshare')
     print('Try a command to get more information about it')
 
+def activeServer(serverName):
+    sName+=serverName+'$ '
+
+    print(f'Joined {sName}!')
+    s.send(bytes(input(f'{sName}'), 'utf-8'))
+
+
+
 def attemptConn(host, port):
     print(f'Attempting to connect to {host}:{port}')
     with socket(AF_INET, SOCK_STREAM) as s:
-        s.connect((host, port))
+        try:
+            s.connect((host, port))
+        except:
+            print('Could not connect!')
+        else:
+            activeServer(f'{host}:{port}')
+            #s.sendall(bytes(input(f'{host}:{port}$ Enter username: '), 'utf-8'))
 
-        s.sendall(bytes(input('Enter username: '), 'utf-8'))
+def hostServer(host, port):
+    ss = ScrareServer(host, port)
+    Thread(target=ss.startServer())
 
-        t = Thread(target=shareScreen, args=(s, ))
-        t.start()
-
-        while True:
-            inData = s.recv(1024)
-            print(inData.decode())
-
-def p2pshare():
-    def goodp2p(ui):
-        if len(ui.split(':')) == 2:
-            if type(ui.split(':')[0]) == str:
-                try:
-                    int(ui.split(':')[1])
-                except:
-                    pass
-                else:
-                    return [ui.split(':')[0], int(ui.split(':')[1])]
-        return False
-    
+def p2pjoinshare():
     i = ''
     while i != 'exit' or i != 'quit':
-        i = input('Please enter IP:HOST you are connecting to\ne.g. 123.45.67.89:8675...\n')
+        i = input('Please enter IP:HOST you are connecting to (e.g. 123.45.67.89:8675)\n')
         gp2p = goodp2p(i)
         if gp2p != False:
             break
     attemptConn(gp2p[0], gp2p[1])
+
+def p2pshare():
+    i = ''
+    while i != 'exit' or i != 'quit':
+        i = input('Please enter IP:HOST you are hosting from (e.g. 123.45.67.89:8675)\n')
+        gp2p = goodp2p(i)
+        if gp2p != False:
+            break
+    hostServer(gp2p[0], gp2p[1])
 
 
 def processSinput(i):
@@ -74,7 +128,10 @@ def processSinput(i):
         if ii == 'start':
             p2pshare()
     elif i == 'p2p-joinshare':
-        pass
+        print('Using p2p joinshare CAN BE UNSAFE!\nYour connection will be peer-peer!')
+        ii = input("If this is okay type 'start' to continue...\n")
+        if ii == 'start':
+            p2pjoinshare()
     else:
         print("Command not found - Try 'help' for more information")
 
