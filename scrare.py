@@ -2,6 +2,7 @@
 from socket import socket,AF_INET,SOCK_STREAM
 from threading import Thread
 from time import sleep
+from zlib import compress,decompress
 
 activeUsers = 1232
 
@@ -17,8 +18,13 @@ intro = f'''
       ░  ░ ░         ░           ░  ░   ░        ░  ░
          ░   High Res Screen Sharing
                Private Chat Rooms
-                 {activeUsers} Active
+            {activeUsers} Active Users
 '''
+
+CLIENTS = []
+
+def b(data):
+    return (bytes(data, 'utf-8'))
 
 class Server():
     def __init__(self, ip='127.0.0.1', port=6969):
@@ -35,14 +41,23 @@ class ScrareClient():
         self.sock = sock
         self.addr = addr
         self.user = ''
-    def interact(self):
-        pass
+    def interact(self, sock):
+        while True:
+            try:
+                if self.user == '':
+                    data = sock.recv(512).decode()
+                    self.user = data
+                    print(f'{self.addr} was named {self.user}')
+                else:
+                    data = sock.recv(4096).decode()
+                    print(f'{self.user} said {data}')
+            except:
+                pass
 
 class ScrareServer():
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.clients = []
     def startServer(self):
         with socket(AF_INET, SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -52,7 +67,8 @@ class ScrareServer():
                 s.listen()
                 sock, addr = s.accept()
                 client = ScrareClient(sock, addr)
-                client.interact()
+                print(f'New client connection at: {addr}')
+                client.interact(sock)
 
 def goodp2p(ui):
     if ui == '':
@@ -73,14 +89,16 @@ def helpScreen():
     print('help,p2s-share,p2s-joinshare,p2p-share','p2p-joinshare')
     print('Try a command to get more information about it')
 
-def activeServer(serverName):
-    sName+=serverName+'$ '
+def activeServer(sock, serverName):
 
-    print(f'Joined {sName}!')
-    s.send(bytes(input(f'{sName}'), 'utf-8'))
+    print(f'Joined {serverName}')
 
-
-
+    i = ''
+    while i != '**disconnect' or i != '**leave' or i != '**quit' or i != '**exit':
+        i = input(f'{serverName}$ ')
+        sock.send(b(i))
+    sock.send(b('disconnect'))
+    
 def attemptConn(host, port):
     print(f'Attempting to connect to {host}:{port}')
     with socket(AF_INET, SOCK_STREAM) as s:
@@ -89,8 +107,7 @@ def attemptConn(host, port):
         except:
             print('Could not connect!')
         else:
-            activeServer(f'{host}:{port}')
-            #s.sendall(bytes(input(f'{host}:{port}$ Enter username: '), 'utf-8'))
+            activeServer(s, f'{host}:{port}')
 
 def hostServer(host, port):
     ss = ScrareServer(host, port)
